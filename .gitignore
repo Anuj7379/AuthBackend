@@ -31,3 +31,19 @@ bin/
 obj/
 out/
 build-check/
+
+
+# Build folders
+bin/
+obj/
+
+# User-specific files
+.vs/
+*.user
+*.suo
+
+# Environment configuration
+appsettings.Development.json
+# Or:
+# appsettings.*.json
+# !appsettings.json
