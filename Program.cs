@@ -27,14 +27,10 @@ var defaultPostgresConnection =
     ?? string.Empty;
 
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    var postgresBuilder = new Npgsql.NpgsqlConnectionStringBuilder(databaseUrl)
-    {
-        SslMode = Npgsql.SslMode.Require
-    };
-
-    defaultPostgresConnection = postgresBuilder.ToString();
+    defaultPostgresConnection = databaseUrl;
 }
 
 if (databaseProvider.Equals(
