@@ -1,8 +1,24 @@
 services:
   - type: web
     name: authapi
-    env: dotnet
+    env: docker
     plan: free
     branch: main
-    buildCommand: dotnet publish -c Release -o published
-    startCommand: dotnet published/AuthApi.dll
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DatabaseProvider
+        value: Postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: AuthApi
+      - key: Jwt__Audience
+        value: AuthApiUsers
+      - key: AllowedOrigins
+        sync: false
