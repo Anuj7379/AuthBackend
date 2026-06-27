@@ -1,0 +1,26 @@
+# Visual Studio files
+.vs/
+
+# Build output
+bin/
+obj/
+published/
+
+# User secrets and environment files
+*.user
+*.suo
+.env
+.env.local
+
+# Data protection keys
+DataProtectionKeys/
+
+# JetBrains Rider
+.idea/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store

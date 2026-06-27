@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: authapi
+    env: dotnet
+    plan: free
+    branch: main
+    buildCommand: dotnet publish -c Release -o published
+    startCommand: dotnet published/AuthApi.dll
