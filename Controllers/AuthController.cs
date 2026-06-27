@@ -16,15 +16,18 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _context;
     private readonly JwtService _jwtService;
     private readonly bool _isProduction;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         AppDbContext context,
         JwtService jwtService,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        ILogger<AuthController> logger)
     {
         _context = context;
         _jwtService = jwtService;
         _isProduction = environment.IsProduction();
+        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -67,49 +70,36 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(
         LoginDto dto)
     {
-        var email = NormalizeEmail(dto.Email);
-
-        var user =
-            await _context.Users
-            .FirstOrDefaultAsync(
-                x => x.Email == email);
-
-        if (user == null)
+        try
         {
-            return Unauthorized(
-                new
-                {
-                    message = "Invalid Credentials"
-                });
-        }
+            var email = NormalizeEmail(dto.Email);
 
-        bool verified =
-            BCrypt.Net.BCrypt.Verify(
-                dto.Password,
-                user.PasswordHash);
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == email);
 
-        if (!verified)
-        {
-            return Unauthorized(
-                new
-                {
-                    message = "Invalid Credentials"
-                });
-        }
-
-        var token =
-            _jwtService.GenerateToken(user);
-
-        Response.Cookies.Append(
-            "jwt",
-            token,
-            CreateAuthCookieOptions());
-
-        return Ok(
-            new
+            if (user == null)
             {
-                message = "Login Success"
-            });
+                return Unauthorized(new { message = "Invalid Credentials" });
+            }
+
+            bool verified = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+
+            if (!verified)
+            {
+                return Unauthorized(new { message = "Invalid Credentials" });
+            }
+
+            var token = _jwtService.GenerateToken(user);
+
+            Response.Cookies.Append("jwt", token, CreateAuthCookieOptions());
+
+            return Ok(new { message = "Login Success" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during login for {Email}", dto?.Email);
+            return StatusCode(500, new { message = "Internal Server Error" });
+        }
     }
 
     [HttpPost("logout")]

@@ -33,6 +33,13 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     defaultPostgresConnection = databaseUrl;
 }
 
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetBytes(jwtKey).Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key must be configured and at least 32 bytes long. Update appsettings or environment variables with a stronger secret.");
+}
+
 if (databaseProvider.Equals(
         "Postgres",
         StringComparison.OrdinalIgnoreCase)
@@ -155,6 +162,7 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 }
 
