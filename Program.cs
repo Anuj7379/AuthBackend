@@ -30,7 +30,7 @@ var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    defaultPostgresConnection = databaseUrl;
+    defaultPostgresConnection = ConvertDatabaseUrlToConnectionString(databaseUrl);
 }
 
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -47,6 +47,75 @@ if (databaseProvider.Equals(
 {
     throw new InvalidOperationException(
         "Postgres provider selected but no PostgresConnection or DATABASE_URL is configured.");
+}
+
+static string ConvertDatabaseUrlToConnectionString(string databaseUrl)
+{
+    if (string.IsNullOrWhiteSpace(databaseUrl))
+    {
+        return databaseUrl;
+    }
+
+    if (!databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+        && !databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        return databaseUrl;
+    }
+
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var builder = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+        Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+        SslMode = Npgsql.SslMode.Require
+    };
+
+    if (!string.IsNullOrWhiteSpace(uri.Query))
+    {
+        var query = uri.Query.TrimStart('?');
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length != 2)
+            {
+                continue;
+            }
+
+            var key = pair[0].ToLowerInvariant();
+            var value = Uri.UnescapeDataString(pair[1]);
+
+            switch (key)
+            {
+                case "sslmode":
+                    builder.SslMode = value.ToLowerInvariant() switch
+                    {
+                        "disable" => Npgsql.SslMode.Disable,
+                        "prefer" => Npgsql.SslMode.Prefer,
+                        "require" => Npgsql.SslMode.Require,
+                        "verify-ca" => Npgsql.SslMode.VerifyCA,
+                        "verify-full" => Npgsql.SslMode.VerifyFull,
+                        _ => builder.SslMode
+                    };
+                    break;
+                default:
+                    try
+                    {
+                        builder[key] = value;
+                    }
+                    catch
+                    {
+                        // ignore unsupported parameters, but keep the rest working
+                    }
+                    break;
+            }
+        }
+    }
+
+    return builder.ConnectionString;
 }
 
 builder.Logging.ClearProviders();
